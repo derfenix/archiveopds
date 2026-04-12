@@ -23,6 +23,19 @@ go build -o archiveopds ./cmd/archiveopds
 
 Подробнее про память, поиск, лимиты выдачи книг и завершение процесса — в [docs/runtime.md](docs/runtime.md).
 
+## CI и релизы
+
+- **GitHub Actions:** [`.github/workflows/`](.github/workflows/) — на push/PR в `main` или `master` запускаются `go test` и `go build`; при push тега вида `v*` (например `v1.0.0`) — сборка артефактов через [GoReleaser](https://goreleaser.com/) и публикация GitHub Release (бинарники linux/windows/darwin, amd64/arm64, архивы + `checksums.txt`).
+- **Forgejo / Gitea Actions:** те же сценарии в [`.gitea/workflows/`](.gitea/workflows/) (типичный путь для Codeberg и многих инстансов Forgejo) и дубликат в [`.forgejo/workflows/`](.forgejo/workflows/), если администратор включил только каталог `.forgejo/workflows`.
+
+На Forgejo GoReleaser определяет хост по `origin` и создаёт релиз через API инстанса; в job передаётся `GITHUB_TOKEN` — так называется встроенный токен в совместимом слое Actions (достаточно прав **contents: write** для репозитория).
+
+Локальная проверка упаковки без публикации:
+
+```bash
+go run github.com/goreleaser/goreleaser/v2@v2.4.8 release --snapshot --clean
+```
+
 ## Лицензия
 
 Проект распространяется на условиях **GNU General Public License v3.0**. Полный текст — в файле [LICENSE](LICENSE).
