@@ -10,7 +10,9 @@ permissions:
 
 jobs:
   release:
-    runs-on: debian-node
+    runs-on: 
+      - debian-node
+      - fast
     steps:
       - uses: https://github.com/actions/checkout@v4
         with:
@@ -27,5 +29,4 @@ jobs:
           version: "~> v2"
           args: release --clean
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITEA_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
