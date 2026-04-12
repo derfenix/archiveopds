@@ -23,7 +23,7 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - uses: actions/goreleaser-action@v6
+      - uses: https://git.derfenix.pro/actions/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: "~> v2"
