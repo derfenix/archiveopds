@@ -1,7 +1,7 @@
 # Maintainer: derfenix<derfenix@gmail.com>
 
 pkgname=archiveopds
-pkgver=0.1.0
+pkgver=1.0.9
 pkgrel=1
 pkgdesc='OPDS-server for INPX catalogs and external ZIP-files'
 arch=(x86_64 aarch64)
@@ -14,7 +14,7 @@ options=('!lto')
 
 _tag="v${pkgver}"
 source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/${_tag}.tar.gz")
-sha256sums=('SKIP')
+sha256sums=('50df591688d61ce19ffef8cdce810377ebde579a820b1d00b7a2efeda8b794b9')
 
 prepare() {
 	cd "${srcdir}"
