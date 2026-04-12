@@ -8,11 +8,13 @@ on:
 
 jobs:
   test:
-    runs-on: debian-node
+    runs-on: 
+      - debian-node
+      - fast
     steps:
-      - uses: actions/checkout@v4
+      - uses: https://github.com/actions/checkout@v4
 
-      - uses: actions/setup-go@v5
+      - uses: https://github.com/actions/setup-go@v5
         with:
           go-version-file: go.mod
           cache: true

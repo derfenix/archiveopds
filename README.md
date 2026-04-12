@@ -30,6 +30,8 @@ go build -o archiveopds ./cmd/archiveopds
 
 На Forgejo GoReleaser определяет хост по `origin` и создаёт релиз через API инстанса; в job передаётся `GITHUB_TOKEN` — так называется встроенный токен в совместимом слое Actions (достаточно прав **contents: write** для репозитория).
 
+В шагах `uses` указаны **полные URL** репозиториев на GitHub (`https://github.com/actions/...`, `https://github.com/goreleaser/...`): иначе короткая форма `owner/action@v1` на Forgejo резолвится в репозиторий на вашем инстансе (и клон падает с «Not found»). Runner должен иметь доступ в интернет до `github.com`.
+
 Локальная проверка упаковки без публикации:
 
 ```bash
