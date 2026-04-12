@@ -49,3 +49,11 @@ changelog:
     exclude:
       - "^ci:"
       - "^chore\\(ci\\):"
+
+release:
+  gitea:
+    owner: derfenix
+    name: archiveopds
+    urls:
+      api: https://git.derfenix.pro/api/v1
+      download: https://git.derfenix.pro
