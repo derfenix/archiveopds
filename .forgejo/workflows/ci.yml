@@ -12,9 +12,9 @@ jobs:
       - debian-node
       - fast
     steps:
-      - uses: https://github.com/actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - uses: https://github.com/actions/setup-go@v5
+      - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
           cache: true
