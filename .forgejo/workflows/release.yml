@@ -29,6 +29,4 @@ jobs:
           version: "~> v2"
           args: release --clean
         env:
-          # Runner подставляет GITHUB_TOKEN глобально; GoReleaser допускает только один из SCM-токенов.
-          GITHUB_TOKEN: ""
-          GITEA_TOKEN: ${{ secrets.GITEA_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
