@@ -26,11 +26,9 @@ go build -o archiveopds ./cmd/archiveopds
 ## CI и релизы
 
 - **GitHub Actions:** [`.github/workflows/`](.github/workflows/) — на push/PR в `main` или `master` запускаются `go test` и `go build`; при push тега вида `v*` (например `v1.0.0`) — сборка артефактов через [GoReleaser](https://goreleaser.com/) и публикация GitHub Release (бинарники linux/windows/darwin, amd64/arm64, архивы + `checksums.txt`).
-- **Forgejo / Gitea Actions:** те же сценарии в [`.gitea/workflows/`](.gitea/workflows/) (типичный путь для Codeberg и многих инстансов Forgejo) и дубликат в [`.forgejo/workflows/`](.forgejo/workflows/), если администратор включил только каталог `.forgejo/workflows`.
+- **Forgejo / Gitea Actions:** дубликаты workflow в [`.forgejo/workflows/`](.forgejo/workflows/).
 
 На Forgejo GoReleaser определяет хост по `origin` и создаёт релиз через API инстанса; в job передаётся `GITHUB_TOKEN` — так называется встроенный токен в совместимом слое Actions (достаточно прав **contents: write** для репозитория).
-
-В шагах `uses` указаны **полные URL** репозиториев на GitHub (`https://github.com/actions/...`, `https://github.com/goreleaser/...`): иначе короткая форма `owner/action@v1` на Forgejo резолвится в репозиторий на вашем инстансе (и клон падает с «Not found»). Runner должен иметь доступ в интернет до `github.com`.
 
 Локальная проверка упаковки без публикации:
 
