@@ -1,0 +1,19 @@
+[Unit]
+Description=archiveopds OPDS server (INPX / ZIP libraries)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Параметры: см. deploy/systemd/archiveopds.env.example → /etc/archiveopds/environment
+EnvironmentFile=-/etc/archiveopds/environment
+ExecStart=/usr/local/bin/archiveopds serve
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=45
+
+User=archiveopds
+Group=archiveopds
+
+[Install]
+WantedBy=multi-user.target

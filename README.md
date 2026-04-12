@@ -1,5 +1,7 @@
 # archiveopds
 
+**English:** [README_EN.md](README_EN.md)
+
 OPDS-сервер для локального каталога книг, разложенного по внешним ZIP-томам и индексу **INPX** (как в типичных «библиотечных» раздачах). Клиенты (например, читалки с поддержкой OPDS) получают навигацию, поиск и ссылки на выдачу файлов.
 
 ## Флибуста
@@ -11,9 +13,13 @@ OPDS-сервер для локального каталога книг, раз�
 Требуется Go из `go.mod` (см. версию в файле).
 
 ```bash
-go build -o archiveopds ./cmd/archiveopds
-./archiveopds serve --archive /path/to/library/root --base-url http://127.0.0.1:8080
+make              # бинарник в bin/archiveopds
+./bin/archiveopds serve --archive /path/to/library/root --base-url http://127.0.0.1:8080
 ```
+
+Установка в систему (нужны права root): `sudo make install`, затем `sudo systemd-sysusers`, скопируйте `environment.example` в `/etc/archiveopds/environment`, `systemctl enable --now archiveopds`. Переменные: `PREFIX`, `DESTDIR` (см. `make help`).
+
+**Arch Linux:** [deploy/archlinux/PKGBUILD](deploy/archlinux/PKGBUILD) качает **архив исходников тега** с Forgejo (`$url/archive/v$pkgver.tar.gz`, как в Gitea). В `PKGBUILD` выставьте `pkgver` под существующий тег **`v$pkgver`**, затем `updpkgsums` и `makepkg -si` из `deploy/archlinux`. При необходимости замените `url` на свой инстанс.
 
 Список флагов и переменных окружения:
 
@@ -22,6 +28,8 @@ go build -o archiveopds ./cmd/archiveopds
 ```
 
 Подробнее про память, поиск, лимиты выдачи книг и завершение процесса — в [docs/runtime.md](docs/runtime.md).
+
+**systemd:** unit [deploy/systemd/archiveopds.service](deploy/systemd/archiveopds.service) читает переменные из **`/etc/archiveopds/environment`** (префикс `ARCHIVEOPDS_*`, как у `archiveopds config`); образец — [deploy/systemd/archiveopds.env.example](deploy/systemd/archiveopds.env.example). Пользователь `archiveopds` можно завести через [deploy/sysusers.d/archiveopds.conf](deploy/sysusers.d/archiveopds.conf) и **`systemd-sysusers`**. Бинарник в unit задан как `/usr/local/bin/archiveopds` — при необходимости поправьте путь или используйте `systemctl edit`.
 
 ## CI и релизы
 
