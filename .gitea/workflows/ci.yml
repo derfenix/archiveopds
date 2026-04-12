@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: debian-node
     steps:
       - uses: actions/checkout@v4
 
