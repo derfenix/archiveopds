@@ -22,7 +22,15 @@ func bindRuntimeFlags(cmd *cobra.Command, cfg *config.Config) {
 	cmd.Flags().BoolVar(&cfg.ExposeErrors, "expose-errors", cfg.ExposeErrors,
 		fmt.Sprintf("отдавать клиенту текст внутренних ошибок (env %s)", config.EnvExposeErrors))
 	cmd.Flags().Float64Var(&cfg.RateLimitRPS, "rate-limit-rps", cfg.RateLimitRPS,
-		fmt.Sprintf("глобальный лимит запросов/с, 0=выкл (env %s)", config.EnvRateLimitRPS))
+		fmt.Sprintf("лимит запросов/с, 0=выкл (env %s)", config.EnvRateLimitRPS))
+	cmd.Flags().BoolVar(&cfg.RateLimitPerIP, "rate-limit-per-ip", cfg.RateLimitPerIP,
+		fmt.Sprintf("отдельный лимит на IP-клиент (env %s)", config.EnvRateLimitPerIP))
+	cmd.Flags().BoolVar(&cfg.RateLimitTrustForward, "rate-limit-trust-forward", cfg.RateLimitTrustForward,
+		fmt.Sprintf("для per-IP: доверять X-Forwarded-For (только за доверенным прокси, env %s)", config.EnvRateLimitTrustForward))
+	cmd.Flags().IntVar(&cfg.RateLimitMaxTrackedIPs, "rate-limit-max-tracked-ips", cfg.RateLimitMaxTrackedIPs,
+		fmt.Sprintf("макс. число отдельных per-IP лимитеров, 0=без капа (env %s)", config.EnvRateLimitMaxTrackedIPs))
+	cmd.Flags().IntVar(&cfg.MaxOpenZipVolumes, "max-open-zip-volumes", cfg.MaxOpenZipVolumes,
+		fmt.Sprintf("макс. открытых .zip в кэше (LRU), 0=без лимита (env %s)", config.EnvMaxOpenZipVolumes))
 	cmd.Flags().IntVar(&cfg.AnnotationWorkers, "annotation-workers", cfg.AnnotationWorkers,
 		fmt.Sprintf("параллельность FB2-аннотаций, мин. 1 (env %s)", config.EnvAnnotationWorkers))
 }

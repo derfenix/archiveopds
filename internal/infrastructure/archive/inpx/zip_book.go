@@ -4,12 +4,14 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"git.derfenix.pro/derfenix/archiveopds/internal/application/port/outbound"
 	"git.derfenix.pro/derfenix/archiveopds/internal/domain/book"
@@ -23,45 +25,111 @@ const (
 	maxBookLoadBytes = 256 << 20
 )
 
-func openFromZip(ctx context.Context, root string, id book.ID) (outbound.ReadSeekCloser, int64, string, error) {
+func isNotFoundOpenErr(err error) bool {
+	return err != nil && os.IsNotExist(err)
+}
+
+// innerPathUnsafe reports paths that must never be resolved inside a zip (zip-slip style abuse).
+func innerPathUnsafe(inner string) bool {
+	trim := strings.TrimSpace(inner)
+	if trim == "" {
+		return true
+	}
+	if filepath.IsAbs(trim) {
+		return true
+	}
+	s := filepath.ToSlash(trim)
+	return strings.Contains(s, "..")
+}
+
+// errZipEntryNotFound is returned when findAndOpenZipEntry cannot match inner to a file in the volume.
+var errZipEntryNotFound = errors.New("inpx: no zip entry for inner path")
+
+// findAndOpenZipEntry locks only for lookup and zip.File.Open; the caller must close rc. Reads run without the volume lock.
+func (n *Navigator) findAndOpenZipEntry(zpath, inner string) (*zip.File, io.ReadCloser, error) {
+	v, err := n.getOrOpenVolume(zpath)
+	if err != nil {
+		return nil, nil, err
+	}
+	v.mu.Lock()
+	f := findZipEntry(v.zr, inner)
+	if f == nil {
+		v.mu.Unlock()
+		v.releaseLease() // getOrOpenVolume lease, no entry opened
+		return nil, nil, errZipEntryNotFound
+	}
+	rc, err := f.Open()
+	v.mu.Unlock()
+	if err != nil {
+		v.releaseLease() // getOrOpenVolume lease, Open failed
+		return f, nil, err
+	}
+	// getOrOpenVolume already incremented v.refs; onClose runs after inner rc.Close
+	rc = &refCountedReadCloser{
+		rc: rc,
+		onClose: func() {
+			v.releaseLease()
+		},
+	}
+	return f, rc, nil
+}
+
+// refCountedReadCloser closes the zip entry body then releases the volume lease (idempotent Close).
+type refCountedReadCloser struct {
+	rc      io.ReadCloser
+	onClose func()
+	once    sync.Once
+	err     error
+}
+
+func (r *refCountedReadCloser) Read(p []byte) (int, error) {
+	return r.rc.Read(p)
+}
+
+func (r *refCountedReadCloser) Close() error {
+	r.once.Do(func() {
+		r.err = r.rc.Close()
+		if r.onClose != nil {
+			r.onClose()
+		}
+	})
+	return r.err
+}
+
+func (n *Navigator) openFromZip(ctx context.Context, id book.ID) (outbound.ReadSeekCloser, int64, string, error) {
 	zipStem, inner, ok := decodeBookRef(id)
 	if !ok {
 		return nil, 0, "", domerr.ErrNotFound
 	}
-	zpath := filepath.Join(root, zipStem+".zip")
-	zr, err := zip.OpenReader(zpath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, 0, "", domerr.ErrNotFound
-		}
-		return nil, 0, "", fmt.Errorf("%w: %w", domerr.ErrArchiveOpen, err)
-	}
-
-	f := findZipEntry(zr, inner)
-	if f == nil {
-		_ = zr.Close()
+	if innerPathUnsafe(inner) {
 		return nil, 0, "", domerr.ErrNotFound
 	}
+	zpath := filepath.Join(n.root, zipStem+".zip")
 
-	rc, err := f.Open()
+	f, rc, err := n.findAndOpenZipEntry(zpath, inner)
 	if err != nil {
-		_ = zr.Close()
+		if errors.Is(err, errZipEntryNotFound) {
+			return nil, 0, "", domerr.ErrNotFound
+		}
+		if isNotFoundOpenErr(err) {
+			return nil, 0, "", domerr.ErrNotFound
+		}
+		if f == nil {
+			return nil, 0, "", fmt.Errorf("%w: %w", domerr.ErrArchiveOpen, err)
+		}
 		return nil, 0, "", err
 	}
+	defer func() { _ = rc.Close() }()
 
 	usize := f.UncompressedSize64
 	ctype := mimeFromName(f.Name)
 
 	if usize > 0 && usize > maxBookLoadBytes {
-		_ = rc.Close()
-		_ = zr.Close()
 		return nil, 0, "", fmt.Errorf("%w (%d МиБ)", domerr.ErrBookTooLarge, maxBookLoadBytes>>20)
 	}
 
 	if usize > 0 && usize <= maxBookInMemoryBytes {
 		data, err := readExact(ctx, rc, int64(usize))
-		_ = rc.Close()
-		_ = zr.Close()
 		if err != nil {
 			return nil, 0, "", err
 		}
@@ -70,8 +138,6 @@ func openFromZip(ctx context.Context, root string, id book.ID) (outbound.ReadSee
 	}
 
 	trc, sz, err := materializeZipEntryToTemp(ctx, rc, int64(usize))
-	_ = rc.Close()
-	_ = zr.Close()
 	if err != nil {
 		return nil, 0, "", err
 	}
@@ -186,7 +252,7 @@ func (t *tempReadSeekCloser) Close() error {
 
 func findZipEntry(zr *zip.ReadCloser, inner string) *zip.File {
 	innerNorm := filepath.ToSlash(strings.TrimSpace(inner))
-	if innerNorm == "" {
+	if innerPathUnsafe(inner) || innerNorm == "" {
 		return nil
 	}
 

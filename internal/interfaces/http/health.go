@@ -11,7 +11,9 @@ import (
 func RegisterHealth(mux *http.ServeMux, archivePath string, nav outbound.ArchiveNavigator) {
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		_, _ = w.Write([]byte("ok\n"))
+		if _, err := w.Write([]byte("ok\n")); err != nil {
+			return
+		}
 	})
 	mux.HandleFunc("GET /readyz", func(w http.ResponseWriter, r *http.Request) {
 		if !catalogReady(archivePath, nav) {
@@ -19,7 +21,9 @@ func RegisterHealth(mux *http.ServeMux, archivePath string, nav outbound.Archive
 			return
 		}
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		_, _ = w.Write([]byte("ok\n"))
+		if _, err := w.Write([]byte("ok\n")); err != nil {
+			return
+		}
 	})
 }
 

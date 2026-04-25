@@ -25,3 +25,10 @@ func (h *OPDSHandler) log() *slog.Logger {
 	}
 	return slog.Default()
 }
+
+// writeResponseBody writes body to w; on client disconnect the error is only logged (headers may already be sent).
+func (h *OPDSHandler) writeResponseBody(w http.ResponseWriter, body []byte) {
+	if _, err := w.Write(body); err != nil {
+		h.log().Debug("write response", "err", err)
+	}
+}

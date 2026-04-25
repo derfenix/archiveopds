@@ -10,7 +10,7 @@ SYSTEMD_UNIT_DIR ?= $(DESTDIR)/etc/systemd/system
 SYSUSERS_DIR     ?= $(DESTDIR)/usr/lib/sysusers.d
 ARCHIVEOPDS_ETC  ?= $(DESTDIR)/etc/archiveopds
 
-.PHONY: all build test clean install uninstall help
+.PHONY: all build test test-race lint clean install uninstall help
 
 all: build
 
@@ -18,6 +18,8 @@ help:
 	@echo "Targets:"
 	@echo "  make / make build  — собрать $(OUTPUT)"
 	@echo "  make test          — go test ./..."
+	@echo "  make test-race     — go test -race ./... (slower, для CI/локали)"
+	@echo "  make lint          — golangci-lint (install: https://golangci-lint.run/usage/install/)"
 	@echo "  make install       — бинарник, systemd unit, sysusers, пример env"
 	@echo "  make uninstall     — удалить установленные файлы"
 	@echo "  make clean         — убрать $(OUTPUT)"
@@ -29,6 +31,12 @@ build:
 
 test:
 	go test ./...
+
+test-race:
+	go test -race -count=1 ./...
+
+lint:
+	golangci-lint run
 
 clean:
 	rm -f $(OUTPUT)

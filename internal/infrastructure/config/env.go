@@ -8,14 +8,18 @@ import (
 
 // Имена переменных окружения (префикс ARCHIVEOPDS_).
 const (
-	EnvListen            = "ARCHIVEOPDS_LISTEN"
-	EnvBaseURL           = "ARCHIVEOPDS_BASE_URL"
-	EnvArchive           = "ARCHIVEOPDS_ARCHIVE"
-	EnvLogLevel          = "ARCHIVEOPDS_LOG_LEVEL"
-	EnvStrictIndex       = "ARCHIVEOPDS_STRICT_INDEX"
-	EnvExposeErrors      = "ARCHIVEOPDS_EXPOSE_ERRORS"
-	EnvRateLimitRPS      = "ARCHIVEOPDS_RATE_LIMIT_RPS"
-	EnvAnnotationWorkers = "ARCHIVEOPDS_ANNOTATION_WORKERS"
+	EnvListen                 = "ARCHIVEOPDS_LISTEN"
+	EnvBaseURL                = "ARCHIVEOPDS_BASE_URL"
+	EnvArchive                = "ARCHIVEOPDS_ARCHIVE"
+	EnvLogLevel               = "ARCHIVEOPDS_LOG_LEVEL"
+	EnvStrictIndex            = "ARCHIVEOPDS_STRICT_INDEX"
+	EnvExposeErrors           = "ARCHIVEOPDS_EXPOSE_ERRORS"
+	EnvRateLimitRPS           = "ARCHIVEOPDS_RATE_LIMIT_RPS"
+	EnvRateLimitPerIP         = "ARCHIVEOPDS_RATE_LIMIT_PER_IP"
+	EnvRateLimitTrustForward  = "ARCHIVEOPDS_RATE_LIMIT_TRUST_FORWARD"
+	EnvRateLimitMaxTrackedIPs = "ARCHIVEOPDS_RATE_LIMIT_MAX_TRACKED_IPS"
+	EnvMaxOpenZipVolumes      = "ARCHIVEOPDS_MAX_OPEN_ZIP_VOLUMES"
+	EnvAnnotationWorkers      = "ARCHIVEOPDS_ANNOTATION_WORKERS"
 )
 
 // ApplyEnv перезаписывает поля cfg непустыми значениями из окружения.
@@ -43,6 +47,22 @@ func ApplyEnv(cfg *Config) {
 			cfg.RateLimitRPS = f
 		}
 	}
+	if v := strings.TrimSpace(os.Getenv(EnvRateLimitPerIP)); v != "" {
+		cfg.RateLimitPerIP = isEnvTrueish(v)
+	}
+	if v := strings.TrimSpace(os.Getenv(EnvRateLimitTrustForward)); v != "" {
+		cfg.RateLimitTrustForward = isEnvTrueish(v)
+	}
+	if v := strings.TrimSpace(os.Getenv(EnvRateLimitMaxTrackedIPs)); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			cfg.RateLimitMaxTrackedIPs = n
+		}
+	}
+	if v := strings.TrimSpace(os.Getenv(EnvMaxOpenZipVolumes)); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			cfg.MaxOpenZipVolumes = n
+		}
+	}
 	if v := strings.TrimSpace(os.Getenv(EnvAnnotationWorkers)); v != "" {
 		if n, err := strconv.Atoi(v); err == nil {
 			cfg.AnnotationWorkers = n
@@ -51,7 +71,12 @@ func ApplyEnv(cfg *Config) {
 }
 
 func envBool(key string) bool {
-	v := strings.TrimSpace(strings.ToLower(os.Getenv(key)))
+	return isEnvTrueish(os.Getenv(key))
+}
+
+// isEnvTrueish reports whether v looks like an enabled/yes value (1, true, yes, on).
+func isEnvTrueish(v string) bool {
+	v = strings.TrimSpace(strings.ToLower(v))
 	return v == "1" || v == "true" || v == "yes" || v == "on"
 }
 

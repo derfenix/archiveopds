@@ -87,3 +87,34 @@ func TestNavigator_SearchBooks(t *testing.T) {
 		t.Fatalf("empty criteria: err=%v len=%d total=%d", err, len(out), total)
 	}
 }
+
+func benchmarkSearchCatalog(n int) *Navigator {
+	books := make([]book.Book, n)
+	for i := 0; i < n; i++ {
+		b := book.Book{
+			Author:    "AuthorName",
+			BookTitle: "TitleLine",
+			Genre:     "fiction",
+			Title:     "AuthorName — TitleLine",
+			Year:      2000 + (i % 20),
+		}
+		b.SearchBlob = buildSearchBlob(b)
+		books[i] = b
+	}
+	return &Navigator{allBooks: books, bySection: map[string][]book.Book{"s": books}}
+}
+
+func BenchmarkNavigator_SearchBooks_qwords(b *testing.B) {
+	const n = 10_000
+	nav := benchmarkSearchCatalog(n)
+	ctx := context.Background()
+	criteria := catalog.SearchCriteria{Query: "authorname titleline"}
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		_, _, err := nav.SearchBooks(ctx, criteria)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}

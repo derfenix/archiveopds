@@ -60,7 +60,13 @@ func New(cfg config.Config) (*App, error) {
 		if burst > 256 {
 			burst = 256
 		}
-		inner = httpapi.WithRateLimit(cfg.RateLimitRPS, burst, inner)
+		inner = httpapi.WithRateLimit(httpapi.RateLimitConfig{
+			RPS:            cfg.RateLimitRPS,
+			Burst:          burst,
+			PerIP:          cfg.RateLimitPerIP,
+			TrustForwarded: cfg.RateLimitTrustForward,
+			MaxTrackedIPs:  cfg.RateLimitMaxTrackedIPs,
+		}, inner)
 	}
 
 	chain := httpapi.WithRequestLogger(log, inner)

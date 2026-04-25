@@ -1,14 +1,17 @@
 package inpx
 
 import (
-	"archive/zip"
 	"bytes"
 	"context"
 	"encoding/xml"
+	"errors"
+	"fmt"
 	"io"
 	"path/filepath"
 	"strings"
 	"unicode/utf8"
+
+	domerr "git.derfenix.pro/derfenix/archiveopds/internal/domain/errors"
 )
 
 // fb2ReadHead — сколько байт с начала файла читать для разметки description/annotation.
@@ -101,36 +104,34 @@ func finalizeAnnotation(s string) string {
 	return string(r[:maxAnnotationRunes]) + "…"
 }
 
-func readFB2AnnotationFromZip(ctx context.Context, root, zipStem, inner string) (string, error) {
+func readFB2AnnotationFromZip(ctx context.Context, n *Navigator, root, zipStem, inner string) (string, error) {
 	if err := ctx.Err(); err != nil {
 		return "", err
 	}
-	zpath := filepath.Join(root, zipStem+".zip")
-	zr, err := zip.OpenReader(zpath)
-	if err != nil {
-		return "", err
-	}
-	defer zr.Close()
-
-	f := findZipEntry(zr, inner)
-	if f == nil {
+	if innerPathUnsafe(inner) {
 		return "", nil
 	}
+	zpath := filepath.Join(root, zipStem+".zip")
 
-	rc, err := f.Open()
+	f, rc, err := n.findAndOpenZipEntry(zpath, inner)
 	if err != nil {
+		if errors.Is(err, errZipEntryNotFound) {
+			return "", nil
+		}
+		if isNotFoundOpenErr(err) {
+			return "", err
+		}
+		if f == nil {
+			return "", fmt.Errorf("%w: %w", domerr.ErrArchiveOpen, err)
+		}
 		return "", err
 	}
-	defer rc.Close()
-
+	defer func() { _ = rc.Close() }()
 	data, err := readZipEntryPrefix(ctx, rc, fb2ReadHead)
 	if err != nil {
 		return "", err
 	}
 	ann := extractFB2Annotation(data)
-	if ann == "" {
-		return "", nil
-	}
 	return ann, nil
 }
 

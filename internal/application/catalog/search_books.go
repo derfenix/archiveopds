@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"git.derfenix.pro/derfenix/archiveopds/internal/application/port/outbound"
-	domaincatalog "git.derfenix.pro/derfenix/archiveopds/internal/domain/catalog"
 	"git.derfenix.pro/derfenix/archiveopds/internal/domain/book"
+	domaincatalog "git.derfenix.pro/derfenix/archiveopds/internal/domain/catalog"
 )
 
 // SearchBooks — поиск по индексу (автор, название, жанр, год, общий запрос q).

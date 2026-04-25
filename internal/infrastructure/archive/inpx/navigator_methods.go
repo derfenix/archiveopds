@@ -19,8 +19,8 @@ func (n *Navigator) RootSections(_ context.Context) ([]catalog.Section, error) {
 
 func (n *Navigator) ListBooks(ctx context.Context, sectionID string, page catalog.Page) ([]book.Book, int, error) {
 	var full []book.Book
-	switch {
-	case sectionID == FlatCatalogSectionID:
+	switch sectionID {
+	case FlatCatalogSectionID:
 		full = n.allBooks
 	default:
 		if b, ok := n.bySection[sectionID]; ok {
@@ -60,7 +60,7 @@ func (n *Navigator) ListBooks(ctx context.Context, sectionID string, page catalo
 func (n *Navigator) IndexedBookCount() int { return len(n.allBooks) }
 
 func (n *Navigator) OpenReadSeeker(ctx context.Context, id book.ID) (outbound.ReadSeekCloser, int64, string, string, error) {
-	rc, sz, ct, err := openFromZip(ctx, n.root, id)
+	rc, sz, ct, err := n.openFromZip(ctx, id)
 	if err != nil {
 		return nil, 0, "", "", err
 	}

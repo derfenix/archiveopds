@@ -21,4 +21,8 @@ type Book struct {
 	Language    string // код или название, как в индексе
 	Annotation  string
 	LibraryID   string // внутренний id каталога (например Flibusta)
+
+	// SearchBlob is a precomputed lower-case, space-joined string of author, title, genre, etc.
+	// for full-text "q" matching. Populated when loading the catalog; may be empty in tests.
+	SearchBlob string
 }

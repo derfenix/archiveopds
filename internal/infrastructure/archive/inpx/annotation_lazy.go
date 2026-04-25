@@ -100,15 +100,29 @@ func (n *Navigator) attachOneFB2Annotation(ctx context.Context, b *book.Book) {
 		n.annCache.Store(b.ID, annSlot{done: true})
 		return
 	}
-	ann, err := readFB2AnnotationFromZip(ctx, n.root, stem, inner)
-	if err != nil {
+	val, err, _ := n.annFlight.Do(string(b.ID), func() (interface{}, error) {
+		if w, ok := n.annCache.Load(b.ID); ok {
+			if s := w.(annSlot); s.done {
+				return s.text, nil
+			}
+		}
+		ann, err := readFB2AnnotationFromZip(ctx, n, n.root, stem, inner)
+		if err != nil {
+			n.annCache.Store(b.ID, annSlot{done: true})
+			return nil, err
+		}
+		ann = strings.TrimSpace(ann)
+		if ann != "" {
+			n.annCache.Store(b.ID, annSlot{done: true, text: ann})
+			return ann, nil
+		}
 		n.annCache.Store(b.ID, annSlot{done: true})
+		return "", nil
+	})
+	if err != nil {
 		return
 	}
-	if strings.TrimSpace(ann) != "" {
-		n.annCache.Store(b.ID, annSlot{done: true, text: ann})
-		b.Annotation = ann
-		return
+	if s, ok := val.(string); ok && s != "" {
+		b.Annotation = s
 	}
-	n.annCache.Store(b.ID, annSlot{done: true})
 }

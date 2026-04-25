@@ -27,6 +27,7 @@ func (n *Navigator) SearchBooks(ctx context.Context, c catalog.SearchCriteria) (
 		off = 0
 	}
 
+	// When allBooks is empty (e.g. unit tests with only bySection, or a minimal stub), merge sections.
 	src := n.allBooks
 	if len(src) == 0 {
 		for _, books := range n.bySection {
@@ -81,10 +82,10 @@ func queryWords(q string) []string {
 
 func bookMatches(b book.Book, c catalog.SearchCriteria, qwords []string) bool {
 	if len(qwords) > 0 {
-		hay := strings.ToLower(strings.Join([]string{
-			b.Author, b.BookTitle, b.Genre, b.Title,
-			b.Series, b.SeriesIndex, b.Annotation, b.LibraryID, b.Language,
-		}, " "))
+		hay := b.SearchBlob
+		if hay == "" {
+			hay = buildSearchBlob(b)
+		}
 		for _, word := range qwords {
 			if !strings.Contains(hay, word) {
 				return false

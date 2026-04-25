@@ -60,7 +60,7 @@ func (h *OPDSHandler) handleCatalogRoot(w http.ResponseWriter, r *http.Request) 
 	}
 	h.log().Debug("opds catalog root: ok", "sections", len(sections), "body_bytes", len(body))
 	w.Header().Set("Content-Type", opds.NavigationCatalogMediaType+";charset=utf-8")
-	_, _ = w.Write(body)
+	h.writeResponseBody(w, body)
 }
 
 func (h *OPDSHandler) handleNav(w http.ResponseWriter, r *http.Request) {
@@ -77,7 +77,7 @@ func (h *OPDSHandler) handleNav(w http.ResponseWriter, r *http.Request) {
 	}
 	h.log().Debug("opds nav: ok", "sections", len(sections), "body_bytes", len(body))
 	w.Header().Set("Content-Type", opds.NavigationCatalogMediaType+";charset=utf-8")
-	_, _ = w.Write(body)
+	h.writeResponseBody(w, body)
 }
 
 func (h *OPDSHandler) handleSectionPrefix(w http.ResponseWriter, r *http.Request) {
@@ -111,7 +111,7 @@ func (h *OPDSHandler) handleSectionPrefix(w http.ResponseWriter, r *http.Request
 	h.log().Debug("opds section: ok",
 		"section_id", id, "books_page", len(books), "total", total, "body_bytes", len(body))
 	w.Header().Set("Content-Type", opds.AcquisitionFeedMediaType+";charset=utf-8")
-	_, _ = w.Write(body)
+	h.writeResponseBody(w, body)
 }
 
 func (h *OPDSHandler) handleSearch(w http.ResponseWriter, r *http.Request) {
@@ -153,7 +153,7 @@ func (h *OPDSHandler) handleSearch(w http.ResponseWriter, r *http.Request) {
 	}
 	h.log().Debug("opds search: ok", "hits_page", len(books), "total", total, "body_bytes", len(body))
 	w.Header().Set("Content-Type", opds.AcquisitionFeedMediaType+";charset=utf-8")
-	_, _ = w.Write(body)
+	h.writeResponseBody(w, body)
 }
 
 func (h *OPDSHandler) handleOpenSearch(w http.ResponseWriter, r *http.Request) {
@@ -165,7 +165,7 @@ func (h *OPDSHandler) handleOpenSearch(w http.ResponseWriter, r *http.Request) {
 	}
 	h.log().Debug("opds opensearch: ok", "body_bytes", len(body))
 	w.Header().Set("Content-Type", "application/opensearchdescription+xml;charset=utf-8")
-	_, _ = w.Write(body)
+	h.writeResponseBody(w, body)
 }
 
 func (h *OPDSHandler) handleAcquirePrefix(w http.ResponseWriter, r *http.Request) {
@@ -196,7 +196,7 @@ func (h *OPDSHandler) handleAcquirePrefix(w http.ResponseWriter, r *http.Request
 		h.writeHTTPError(w, r, http.StatusInternalServerError, "internal error", err)
 		return
 	}
-	defer rc.Close()
+	defer func() { _ = rc.Close() }()
 
 	serveName := downloadName
 	if serveName == "" {

@@ -3,12 +3,15 @@ package inpx
 import (
 	"archive/zip"
 	"bufio"
+	"container/list"
 	"fmt"
 	"io"
 	"path"
 	"sort"
 	"strings"
 	"sync"
+
+	"golang.org/x/sync/singleflight"
 
 	"git.derfenix.pro/derfenix/archiveopds/internal/domain/book"
 	"git.derfenix.pro/derfenix/archiveopds/internal/domain/catalog"
@@ -24,13 +27,24 @@ type Navigator struct {
 
 	// annCache — ленивое чтение <annotation> из .fb2 в zip (см. annSlot).
 	annCache sync.Map
+	// annFlight collapses in-flight duplicate annotation loads for the same book ID.
+	annFlight singleflight.Group
 	// annWorkers — ограничение параллельных обращений к zip при дочитывании аннотаций.
 	annWorkers int
+
+	// zipVol: cached open .zip per absolute path; guarded by zipVolMu.
+	zipVolMu   sync.Mutex
+	zipVol     map[string]*zipVolume
+	zipMaxOpen int
+	// zipLRU / zipLRUIdx — LRU of zpath when zipMaxOpen > 0.
+	zipLRU    *list.List
+	zipLRUIdx map[string]*list.Element
 }
 
 // Load сканирует все inpxPaths (файлы .inpx) и объединяет индекс.
 // annotationWorkers — число параллельных читателей FB2-аннотаций (минимум 1).
-func Load(root string, inpxPaths []string, annotationWorkers int) (*Navigator, error) {
+// maxOpenZipVolumes — max cached .zip files (0 = no limit; see getOrOpenVolume).
+func Load(root string, inpxPaths []string, annotationWorkers int, maxOpenZipVolumes int) (*Navigator, error) {
 	if annotationWorkers < 1 {
 		annotationWorkers = 1
 	}
@@ -63,12 +77,13 @@ func Load(root string, inpxPaths []string, annotationWorkers int) (*Navigator, e
 	}
 
 	return &Navigator{
-		root:         root,
-		sections:     sections,
-		allBooks:     allBooks,
-		bySection:    by,
-		byID:         byID,
-		annWorkers:   annotationWorkers,
+		root:       root,
+		sections:   sections,
+		allBooks:   allBooks,
+		bySection:  by,
+		byID:       byID,
+		annWorkers: annotationWorkers,
+		zipMaxOpen: maxOpenZipVolumes,
 	}, nil
 }
 
@@ -77,7 +92,7 @@ func ingestInpx(root, inpxPath string, dest map[string][]book.Book) error {
 	if err != nil {
 		return fmt.Errorf("открыть inpx: %w", err)
 	}
-	defer zr.Close()
+	defer func() { _ = zr.Close() }()
 
 	for _, f := range zr.File {
 		if f.FileInfo().IsDir() {
@@ -100,7 +115,7 @@ func readInpFile(f *zip.File, inpStem, root string, dest map[string][]book.Book)
 	if err != nil {
 		return err
 	}
-	defer rc.Close()
+	defer func() { _ = rc.Close() }()
 
 	sc := bufio.NewScanner(rc)
 	buf := make([]byte, 0, 64*1024)
@@ -127,6 +142,7 @@ func readInpFile(f *zip.File, inpStem, root string, dest map[string][]book.Book)
 			Annotation:  rec.Annotation,
 			LibraryID:   rec.LibraryID,
 		}
+		b.SearchBlob = buildSearchBlob(b)
 		dest[rec.SectionStem] = append(dest[rec.SectionStem], b)
 	}
 	if err := sc.Err(); err != nil && err != io.EOF {

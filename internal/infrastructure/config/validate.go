@@ -14,6 +14,12 @@ func (c Config) Validate() error {
 	if c.RateLimitRPS < 0 {
 		return fmt.Errorf("rate_limit_rps: не может быть отрицательным")
 	}
+	if c.RateLimitMaxTrackedIPs < 0 {
+		return fmt.Errorf("rate_limit_max_tracked_ips: не может быть отрицательным (0 = без лимита)")
+	}
+	if c.MaxOpenZipVolumes < 0 {
+		return fmt.Errorf("max_open_zip_volumes: не может быть отрицательным (0 = без лимита)")
+	}
 	if c.AnnotationWorkers < 1 {
 		return fmt.Errorf("annotation_workers: минимум 1 (1 = последовательно)")
 	}

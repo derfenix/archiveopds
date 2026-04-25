@@ -33,7 +33,7 @@ func NewNavigator(cfg config.Config) (outbound.ArchiveNavigator, error) {
 		return NewNavigatorStub(), nil
 	}
 
-	nav, err := inpx.Load(root, paths, cfg.AnnotationWorkers)
+	nav, err := inpx.Load(root, paths, cfg.AnnotationWorkers, cfg.MaxOpenZipVolumes)
 	if err != nil {
 		if cfg.StrictIndex {
 			return nil, fmt.Errorf("inpx load %q: %w", root, err)
