@@ -33,8 +33,8 @@ make              # бинарник в bin/archiveopds
 
 ## CI и релизы
 
-- **GitHub Actions:** [`.github/workflows/`](.github/workflows/) — на push/PR в `main` или `master` запускаются [golangci-lint](https://golangci-lint.run/) ([`.golangci.yml`](.golangci.yml)), `go test` и `go build`; при push тега вида `v*` (например `v1.0.0`) — сборка артефактов через [GoReleaser](https://goreleaser.com/) и публикация GitHub Release (бинарники linux/windows/darwin, amd64/arm64, архивы + `checksums.txt`).
-- **Линтер локально:** `make lint` (нужен `golangci-lint` в `PATH`).
+- **GitHub Actions:** [`.github/workflows/`](.github/workflows/) — на push/PR в `main` или `master` запускаются [golangci-lint](https://golangci-lint.run/) **v2.11.4** ([`.golangci.yml`](.golangci.yml)), `go test` и `go build`; при push тега вида `v*` (например `v1.0.0`) — сборка артефактов через [GoReleaser](https://goreleaser.com/) и публикация GitHub Release (бинарники linux/windows/darwin, amd64/arm64, архивы + `checksums.txt`).
+- **Линтер локально:** `make lint` — [официальный](https://golangci-lint.run/welcome/install/) `golangci-lint` (не ниже v2.11.4 или эквивалент), собранный с той же или более новой **minor**-версией Go, чем в [go.mod](go.mod) (бинарник, собранный со старой Go, с таким go.mod не запустится).
 - **Forgejo / Gitea Actions:** дубликаты workflow в [`.forgejo/workflows/`](.forgejo/workflows/).
 
 На Forgejo GoReleaser определяет хост по `origin` и создаёт релиз через API инстанса; в job передаётся `GITHUB_TOKEN` — так называется встроенный токен в совместимом слое Actions (достаточно прав **contents: write** для репозитория).

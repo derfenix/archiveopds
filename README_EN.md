@@ -29,12 +29,12 @@ Flags and environment variables:
 
 Memory usage, search behaviour, book delivery limits, and process shutdown are described in [docs/runtime.md](docs/runtime.md) (Russian).
 
-**systemd:** [deploy/systemd/archiveopds.service](deploy/systemd/archiveopds.service) reads `**/etc/archiveopds/environment`** (`ARCHIVEOPDS_*` prefix, same as `archiveopds config`); example — [deploy/systemd/archiveopds.env.example](deploy/systemd/archiveopds.env.example). Create the `archiveopds` user with [deploy/sysusers.d/archiveopds.conf](deploy/sysusers.d/archiveopds.conf) and `**systemd-sysusers`**. The unit expects the binary at `/usr/local/bin/archiveopds` — adjust the path or use `systemctl edit` if needed.
+**systemd:** [deploy/systemd/archiveopds.service](deploy/systemd/archiveopds.service) reads `**/etc/archiveopds/environment`** (`ARCHIVEOPDS_`* prefix, same as `archiveopds config`); example — [deploy/systemd/archiveopds.env.example](deploy/systemd/archiveopds.env.example). Create the `archiveopds` user with [deploy/sysusers.d/archiveopds.conf](deploy/sysusers.d/archiveopds.conf) and `**systemd-sysusers`**. The unit expects the binary at `/usr/local/bin/archiveopds` — adjust the path or use `systemctl edit` if needed.
 
 ## CI and releases
 
-- **GitHub Actions:** `[.github/workflows/](.github/workflows/)` — on push/PR to `main` or `master`, [golangci-lint](https://golangci-lint.run/) (see `[.golangci.yml](.golangci.yml)`), `go test`, and `go build`; on push of a `v`* tag (e.g. `v1.0.0`), [GoReleaser](https://goreleaser.com/) builds artifacts and publishes a GitHub Release (linux/windows/darwin, amd64/arm64, archives + `checksums.txt`).
-- **Local lint:** `make lint` (requires `golangci-lint` on `PATH`).
+- **GitHub Actions:** `[.github/workflows/](.github/workflows/)` — on push/PR to `main` or `master`, [golangci-lint](https://golangci-lint.run/) **v2.11.4** (see `[.golangci.yml](.golangci.yml)`), `go test`, and `go build`; on push of a `v`* tag (e.g. `v1.0.0`), [GoReleaser](https://goreleaser.com/) builds artifacts and publishes a GitHub Release (linux/windows/darwin, amd64/arm64, archives + `checksums.txt`).
+- **Local lint:** `make lint` — install the [official](https://golangci-lint.run/welcome/install/) `golangci-lint` binary (v2.11.4+ or equivalent), **built with the same or newer Go minor** as in [go.mod](go.mod); a binary built with an older Go cannot analyze this project.
 - **Forgejo / Gitea Actions:** workflow copies under `[.forgejo/workflows/](.forgejo/workflows/)`.
 
 On Forgejo, GoReleaser uses `origin` and the instance API to publish releases; the job uses `GITHUB_TOKEN` — the built-in Actions-compat token (needs **contents: write** on the repo).
