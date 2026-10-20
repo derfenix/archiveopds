@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -34,19 +35,7 @@ func TestHealthEndpoints_withStubNavigator(t *testing.T) {
 
 func TestOPDSRootCatalog_containsCatalogTitle(t *testing.T) {
 	t.Parallel()
-	mux := http.NewServeMux()
-	nav := archive.NewNavigatorStub()
-	h := &OPDSHandler{
-		ListSections: &appcatalog.ListSections{Nav: nav},
-		ListBooks:    &appcatalog.ListBooks{Nav: nav},
-		SearchBooks:  &appcatalog.SearchBooks{Nav: nav},
-		StreamBook:   &appcatalog.StreamBook{Nav: nav},
-		Feed:         &opds.FeedBuilder{BaseURL: "http://127.0.0.1"},
-	}
-	h.Register(mux)
-
-	srv := httptest.NewServer(mux)
-	t.Cleanup(srv.Close)
+	srv := newOPDSTestServer(t)
 
 	res, err := http.Get(srv.URL + "/opds")
 	if err != nil {
@@ -63,6 +52,93 @@ func TestOPDSRootCatalog_containsCatalogTitle(t *testing.T) {
 	if !strings.Contains(body, "<feed") || !strings.Contains(body, "Каталог") {
 		t.Fatalf("unexpected body prefix: %q", truncate(body, 400))
 	}
+}
+
+// Навигационные записи должны нести <content> и title у ссылки: часть клиентов
+// (Moon+ Reader) иначе показывает фид как обычный XML-документ.
+func TestOPDSRootCatalog_navigationEntriesHaveContent(t *testing.T) {
+	t.Parallel()
+	res, err := http.Get(newOPDSTestServer(t).URL + "/opds")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = res.Body.Close() }()
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		`<content type="text">Каталог</content>`,
+		`rel="subsection"`,
+		`title="Каталог"`,
+		`<name>archiveopds</name>`,
+		`kind=navigation`,
+	} {
+		if !strings.Contains(string(body), want) {
+			t.Fatalf("feed has no %q:\n%s", want, body)
+		}
+	}
+}
+
+func TestLandingPage_linksToOPDSCatalog(t *testing.T) {
+	t.Parallel()
+	srv := newOPDSTestServer(t)
+	res, err := http.Get(srv.URL + "/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = res.Body.Close() }()
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("status %s", res.Status)
+	}
+	if ct := res.Header.Get("Content-Type"); !strings.HasPrefix(ct, "text/html") {
+		t.Fatalf("content-type %q", ct)
+	}
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		`rel="alternate"`,
+		opds.NavigationCatalogMediaType,
+		`href="http://127.0.0.1/opds"`,
+	} {
+		if !strings.Contains(string(body), want) {
+			t.Fatalf("landing page has no %q:\n%s", want, body)
+		}
+	}
+}
+
+func TestFavicon_served(t *testing.T) {
+	t.Parallel()
+	res, err := http.Get(newOPDSTestServer(t).URL + "/favicon.ico")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = res.Body.Close() }()
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("status %s", res.Status)
+	}
+	if ct := res.Header.Get("Content-Type"); !strings.HasPrefix(ct, "image/svg+xml") {
+		t.Fatalf("content-type %q", ct)
+	}
+}
+
+func newOPDSTestServer(t *testing.T) *httptest.Server {
+	t.Helper()
+	nav := archive.NewNavigatorStub()
+	mux := http.NewServeMux()
+	h := &OPDSHandler{
+		ListSections: &appcatalog.ListSections{Nav: nav},
+		ListBooks:    &appcatalog.ListBooks{Nav: nav},
+		SearchBooks:  &appcatalog.SearchBooks{Nav: nav},
+		StreamBook:   &appcatalog.StreamBook{Nav: nav},
+		Feed:         &opds.FeedBuilder{BaseURL: "http://127.0.0.1"},
+	}
+	h.Register(mux)
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	return srv
 }
 
 func truncate(s string, n int) string {

@@ -23,10 +23,11 @@ func WithRequestLogger(log *slog.Logger, h http.Handler) http.Handler {
 			"duration_ms", ms,
 			"bytes", lw.n,
 			"remote", r.RemoteAddr,
+			// Клиент виден сразу: отличать OPDS-читалки от браузеров при разборе жалоб.
+			"user_agent", r.UserAgent(),
 		)
 		log.Debug("http_detail",
 			"query", r.URL.RawQuery,
-			"user_agent", r.UserAgent(),
 			"referer", r.Referer(),
 		)
 	})

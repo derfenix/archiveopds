@@ -30,6 +30,9 @@ type OPDSHandler struct {
 }
 
 func (h *OPDSHandler) Register(mux *http.ServeMux) {
+	// Корень сервера — HTML-страница со ссылкой на каталог (браузер не получает 404).
+	mux.HandleFunc("GET /{$}", h.handleLanding)
+	mux.HandleFunc("GET /favicon.ico", h.handleFavicon)
 	// Корень каталога — типичный URL для клиентов (Calibre OPDS-reader: …/opds).
 	mux.HandleFunc("GET /opds", h.handleCatalogRoot)
 	mux.HandleFunc("GET /opds/", h.handleCatalogRoot)

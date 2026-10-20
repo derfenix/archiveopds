@@ -25,15 +25,18 @@ type atomFeed struct {
 	XmlnsDC   string      `xml:"xmlns:dc,attr"`
 	ID        string      `xml:"id"`
 	Title     string      `xml:"title"`
+	Author    atomPerson  `xml:"author"`
 	Updated   string      `xml:"updated"`
+	Icon      string      `xml:"icon,omitempty"`
 	Links     []atomLink  `xml:"link"`
 	Entries   []atomEntry `xml:"entry"`
 }
 
 type atomLink struct {
-	Rel  string `xml:"rel,attr,omitempty"`
-	Href string `xml:"href,attr"`
-	Type string `xml:"type,attr,omitempty"`
+	Rel   string `xml:"rel,attr,omitempty"`
+	Href  string `xml:"href,attr"`
+	Type  string `xml:"type,attr,omitempty"`
+	Title string `xml:"title,attr,omitempty"`
 }
 
 type atomPerson struct {
@@ -60,12 +63,23 @@ type atomEntry struct {
 	DCIssued     string         `xml:"http://purl.org/dc/elements/1.1/ issued,omitempty"`
 	DCFormat     string         `xml:"http://purl.org/dc/elements/1.1/ format,omitempty"`
 	DCIdentifier string         `xml:"http://purl.org/dc/elements/1.1/ identifier,omitempty"`
+	Content      *atomSummary   `xml:"content,omitempty"`
 	Summary      *atomSummary   `xml:"summary,omitempty"`
 	Links        []atomLink     `xml:"link"`
 }
 
 // CatalogRootPath — канонический вход OPDS (Calibre OPDS-reader и др. ждут …/opds).
 const CatalogRootPath = "/opds"
+
+// atomTimeLayout — RFC 3339 с числовым смещением («+00:00», как у Calibre).
+// Некоторые клиенты (в т.ч. на Android) не разбирают компактный суффикс «Z».
+const atomTimeLayout = "2006-01-02T15:04:05-07:00"
+
+// feedAuthor — atom:author уровня фида: по RFC 4287 он обязателен, если им не
+// обладают все записи (в навигационных записях авторов нет вовсе).
+var feedAuthor = atomPerson{Name: "archiveopds"}
+
+func feedNow() string { return time.Now().UTC().Format(atomTimeLayout) }
 
 func (f *FeedBuilder) NavigationFeed(sections []catalog.Section) ([]byte, error) {
 	return f.navigationCatalog(sections, "/opds/nav", "Navigation")
@@ -77,13 +91,15 @@ func (f *FeedBuilder) RootCatalogFeed(sections []catalog.Section) ([]byte, error
 }
 
 func (f *FeedBuilder) navigationCatalog(sections []catalog.Section, selfPath, title string) ([]byte, error) {
-	now := time.Now().UTC().Format(time.RFC3339)
+	now := feedNow()
 	feed := atomFeed{
 		XmlnsOPDS: "http://opds-spec.org/2010/catalog",
 		XmlnsDC:   xmlnsDC,
 		ID:        f.join(selfPath),
 		Title:     title,
+		Author:    feedAuthor,
 		Updated:   now,
+		Icon:      f.join("/favicon.ico"),
 		Links: []atomLink{
 			{Rel: "self", Href: f.join(selfPath), Type: NavigationCatalogMediaType},
 			{Rel: "start", Href: f.join(CatalogRootPath), Type: NavigationCatalogMediaType},
@@ -96,8 +112,13 @@ func (f *FeedBuilder) navigationCatalog(sections []catalog.Section, selfPath, ti
 			ID:      f.join(sub),
 			Title:   s.Title,
 			Updated: now,
+			// <content> и title у ссылки — как в фидах Calibre: часть клиентов
+			// (Moon+ Reader и др.) без них показывает ленту как обычный документ.
+			Content: &atomSummary{Type: "text", Text: s.Title},
 			Links: []atomLink{
-				{Rel: "subsection", Href: f.join(sub), Type: AcquisitionFeedMediaType},
+				// kind=navigation, как у Calibre: по типу ссылки клиенты решают,
+				// что запись — переход по каталогу, а не файл для скачивания.
+				{Rel: "subsection", Href: f.join(sub), Type: NavigationCatalogMediaType, Title: s.Title},
 			},
 		})
 	}
@@ -106,7 +127,7 @@ func (f *FeedBuilder) navigationCatalog(sections []catalog.Section, selfPath, ti
 
 // AcquisitionFeed — фид раздела с постраничностью (RFC 5005: first, previous, next, last).
 func (f *FeedBuilder) AcquisitionFeed(books []book.Book, sectionID string, total, page, limit int, rawQuery string) ([]byte, error) {
-	now := time.Now().UTC().Format(time.RFC3339)
+	now := feedNow()
 	path := "/opds/section/" + url.PathEscape(sectionID)
 	pageLinks := f.paginationLinks(path, total, page, limit, rawQuery)
 	var links []atomLink
@@ -122,7 +143,9 @@ func (f *FeedBuilder) AcquisitionFeed(books []book.Book, sectionID string, total
 		XmlnsDC:   xmlnsDC,
 		ID:        pageLinks[0].Href,
 		Title:     "Books",
+		Author:    feedAuthor,
 		Updated:   now,
+		Icon:      f.join("/favicon.ico"),
 		Links:     links,
 	}
 	for _, b := range books {
@@ -134,7 +157,7 @@ func (f *FeedBuilder) AcquisitionFeed(books []book.Book, sectionID string, total
 
 // SearchAcquisitionFeed — результаты поиска с той же моделью страниц.
 func (f *FeedBuilder) SearchAcquisitionFeed(books []book.Book, total, page, limit int, rawQuery string) ([]byte, error) {
-	now := time.Now().UTC().Format(time.RFC3339)
+	now := feedNow()
 	path := "/opds/search"
 	pageLinks := f.paginationLinks(path, total, page, limit, rawQuery)
 	var links []atomLink
@@ -149,7 +172,9 @@ func (f *FeedBuilder) SearchAcquisitionFeed(books []book.Book, total, page, limi
 		XmlnsDC:   xmlnsDC,
 		ID:        pageLinks[0].Href,
 		Title:     "Поиск",
+		Author:    feedAuthor,
 		Updated:   now,
+		Icon:      f.join("/favicon.ico"),
 		Links:     links,
 	}
 	for _, b := range books {
