@@ -17,7 +17,7 @@ make              # бинарник в bin/archiveopds
 ./bin/archiveopds serve --archive /path/to/library/root --base-url http://127.0.0.1:8080
 ```
 
-Установка в систему (нужны права root): `sudo make install`, затем `sudo systemd-sysusers`, скопируйте `environment.example` в `/etc/archiveopds/environment`, `systemctl enable --now archiveopds`. Переменные: `PREFIX`, `DESTDIR` (см. `make help`).
+Установка в пользовательский профиль (без root): `make install` — бинарник в `~/.local/bin/archiveopds`, юнит в `~/.config/systemd/user/archiveopds.service`, пример окружения в `~/.config/archiveopds/environment.example`. Скопируйте пример в `~/.config/archiveopds/environment`, поправьте `ARCHIVEOPDS_ARCHIVE`/`ARCHIVEOPDS_BASE_URL` и выполните `make enable` (то же, что `systemctl --user enable --now archiveopds`). Логи: `journalctl --user -u archiveopds -f`. Переменные: `PREFIX`, `CONFIGDIR`, `DESTDIR` (см. `make help`).
 
 **Arch Linux:** [deploy/archlinux/PKGBUILD](deploy/archlinux/PKGBUILD) качает **архив исходников тега** с Forgejo (`$url/archive/v$pkgver.tar.gz`, как в Gitea). В `PKGBUILD` выставьте `pkgver` под существующий тег **`v$pkgver`**, затем `updpkgsums` и `makepkg -si` из `deploy/archlinux`. При необходимости замените `url` на свой инстанс.
 
@@ -29,7 +29,7 @@ make              # бинарник в bin/archiveopds
 
 Подробнее про память, поиск, лимиты выдачи книг и завершение процесса — в [docs/runtime.md](docs/runtime.md).
 
-**systemd:** unit [deploy/systemd/archiveopds.service](deploy/systemd/archiveopds.service) читает переменные из **`/etc/archiveopds/environment`** (префикс `ARCHIVEOPDS_*`, как у `archiveopds config`); образец — [deploy/systemd/archiveopds.env.example](deploy/systemd/archiveopds.env.example). Пользователь `archiveopds` можно завести через [deploy/sysusers.d/archiveopds.conf](deploy/sysusers.d/archiveopds.conf) и **`systemd-sysusers`**. Бинарник в unit задан как `/usr/local/bin/archiveopds` — при необходимости поправьте путь или используйте `systemctl edit`.
+**systemd:** пользовательский юнит [deploy/systemd/archiveopds.user.service](deploy/systemd/archiveopds.user.service) ставится в `~/.config/systemd/user/archiveopds.service`, читает переменные из **`~/.config/archiveopds/environment`** (префикс `ARCHIVEOPDS_*`, как у `archiveopds config`); образец — [deploy/systemd/archiveopds.env.example](deploy/systemd/archiveopds.env.example). Бинарник ожидается в `~/.local/bin/archiveopds`. Для пакетов в репозитории остаётся системный юнит [deploy/systemd/archiveopds.service](deploy/systemd/archiveopds.service) (`/etc/archiveopds/environment`, пользователь `archiveopds` через [deploy/sysusers.d/archiveopds.conf](deploy/sysusers.d/archiveopds.conf)).
 
 ## CI и релизы
 

@@ -17,7 +17,7 @@ make              # binary at bin/archiveopds
 ./bin/archiveopds serve --archive /path/to/library/root --base-url http://127.0.0.1:8080
 ```
 
-System install (root): `sudo make install`, then `sudo systemd-sysusers`, copy `environment.example` to `/etc/archiveopds/environment`, `systemctl enable --now archiveopds`. Variables: `PREFIX`, `DESTDIR` (see `make help`).
+User install (no root): `make install` — binary at `~/.local/bin/archiveopds`, unit at `~/.config/systemd/user/archiveopds.service`, example environment at `~/.config/archiveopds/environment.example`. Copy the example to `~/.config/archiveopds/environment`, set `ARCHIVEOPDS_ARCHIVE`/`ARCHIVEOPDS_BASE_URL`, then run `make enable` (same as `systemctl --user enable --now archiveopds`). Logs: `journalctl --user -u archiveopds -f`. Variables: `PREFIX`, `CONFIGDIR`, `DESTDIR` (see `make help`).
 
 **Arch Linux:** [deploy/archlinux/PKGBUILD](deploy/archlinux/PKGBUILD) downloads the **tag source archive** from Forgejo (`$url/archive/v$pkgver.tar.gz`, Gitea-style). Set `pkgver` in `PKGBUILD` to match an existing `**v$pkgver`** tag, then `updpkgsums` and `makepkg -si` from `deploy/archlinux`. Change `url` if you use another instance.
 
@@ -29,7 +29,7 @@ Flags and environment variables:
 
 Memory usage, search behaviour, book delivery limits, and process shutdown are described in [docs/runtime.md](docs/runtime.md) (Russian).
 
-**systemd:** [deploy/systemd/archiveopds.service](deploy/systemd/archiveopds.service) reads `**/etc/archiveopds/environment`** (`ARCHIVEOPDS_`* prefix, same as `archiveopds config`); example — [deploy/systemd/archiveopds.env.example](deploy/systemd/archiveopds.env.example). Create the `archiveopds` user with [deploy/sysusers.d/archiveopds.conf](deploy/sysusers.d/archiveopds.conf) and `**systemd-sysusers`**. The unit expects the binary at `/usr/local/bin/archiveopds` — adjust the path or use `systemctl edit` if needed.
+**systemd:** the user unit [deploy/systemd/archiveopds.user.service](deploy/systemd/archiveopds.user.service) is installed as `~/.config/systemd/user/archiveopds.service` and reads `**~/.config/archiveopds/environment`** (`ARCHIVEOPDS_`* prefix, same as `archiveopds config`); example — [deploy/systemd/archiveopds.env.example](deploy/systemd/archiveopds.env.example). The binary is expected at `~/.local/bin/archiveopds`. For distro packages the repository also keeps the system unit [deploy/systemd/archiveopds.service](deploy/systemd/archiveopds.service) (`/etc/archiveopds/environment`, `archiveopds` user via [deploy/sysusers.d/archiveopds.conf](deploy/sysusers.d/archiveopds.conf)).
 
 ## CI and releases
 

@@ -1,0 +1,16 @@
+[Unit]
+Description=archiveopds OPDS server (INPX / ZIP libraries)
+Documentation=https://git.derfenix.pro/derfenix/archiveopds
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=-%h/.config/archiveopds/environment
+ExecStart=%h/.local/bin/archiveopds serve
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=45
+
+[Install]
+WantedBy=default.target
